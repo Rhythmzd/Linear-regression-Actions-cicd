@@ -34,7 +34,7 @@ jobs:
         cat linear_model.txt
         
     - name: Upload model artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linear-regression-model
         path: |
