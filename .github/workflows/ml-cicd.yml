@@ -1,0 +1,73 @@
+name: ML CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-train:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run model tests
+      run: python test_model.py
+      
+    - name: Run model training
+      run: python train_model.py
+      
+    - name: Check model output
+      run: |
+        ls -la linear_model.pkl
+        ls -la linear_model.txt
+        
+    - name: Display model parameters
+      run: cat linear_model.txt
+      
+    - name: Upload model artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: trained-model
+        path: |
+          linear_model.pkl
+          linear_model.txt
+        retention-days: 30
+
+  deploy:
+    needs: test-and-train
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download model artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: trained-model
+        
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          linear_model.pkl
+          linear_model.txt
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

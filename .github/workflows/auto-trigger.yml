@@ -1,0 +1,47 @@
+name: Auto Trigger Model Training
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      reason:
+        description: 'Reason for manual trigger'
+        required: false
+        default: 'Manual training trigger'
+
+jobs:
+  scheduled-training:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run model training
+      run: python train_model.py
+      
+    - name: Compare with previous model
+      run: |
+        echo "Training completed at $(date)"
+        echo "Model coefficients:"
+        cat linear_model.txt
+        
+    - name: Commit and push if changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add linear_model.pkl linear_model.txt
+        git diff --staged --quiet || git commit -m "Auto-update model $(date '+%Y-%m-%d %H:%M:%S')"
+        git push
